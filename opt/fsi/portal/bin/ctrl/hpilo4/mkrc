@@ -1,0 +1,202 @@
+#!/bin/sh
+#
+#   create server remote control config for hp and ilo4 remote board
+#
+#   This program is free software; you can redistribute it and/or modify it under the 
+#   terms of the GNU General Public License as published by the Free Software Foundation;
+#   either version 3 of the License, or (at your option) any later version.
+#
+#   This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+#   without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+#   See the GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License along with this program; 
+#   if not, see <http://www.gnu.org/licenses/>.
+# 
+#
+ver="1.01.03 - 08.03.2017"
+retc=0
+ls=""
+progname=${0##*/}
+SOURCE="${BASH_SOURCE[0]}"
+DIR="$( dirname "$SOURCE" )"
+while [ -h "$SOURCE" ]; do 
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+  DIR="$( cd -P "$( dirname "$SOURCE"  )" && pwd )"
+done
+export progdir="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+if [ -z $logfile ]; then logfile=$fsidir"/"$progname".log"; fi
+
+if [ -z $fsifunc ]; then export fsifunc="$progdir/../../../tools/etc/func.sh"; fi
+if [ -f $fsifunc ]; then
+   . $fsifunc
+else
+   echo "ERROR cannot lot fsi functions $fsifunc"
+   exit 99
+fi
+
+mac=""
+pw=""
+ilo_u="administrator"
+ilo_ip=""
+ilo_upw=""
+ilo_upwc=""
+ilo_pw=""
+
+function help() {
+   echo
+   tput setaf 2
+   echo " Help for $progname - $ver"    
+   tput sgr0
+   echo
+   echo " create hp ilo4 rc.ini"
+   echo
+   tput setaf 3
+   echo "  Parameter:"
+   tput sgr0
+   echo "   -m <mac>           mac of server"
+   echo "   -i <ip>            ilo ip"
+   echo "   -p <password>      ilo user plain text password"
+   echo
+   tput setaf 3
+   echo "  Optional Parameter:"
+   tput sgr0
+   echo "   -u <admin>         admin account - default: administrator"
+   echo "   -q                 quiet mode"
+   echo "   -1                 debug mode"
+   echo "   -2                 trace mode"
+   echo "   -l <logfile>       other logfile"
+   echo
+   tput setaf 3
+   echo "  Return Code:"
+   tput sgr0
+   echo "    1 = help"
+   echo "    > = different meaning"
+   echo
+   tput setaf 3
+   echo "  Example:"
+   tput sgr0
+   echo "    $progname -i 10.10.10.10 -p password -m 00-01-02-03-04-05 "
+   echo
+}
+
+
+infmsg "$ls Configure remote control HP iLO 4 v$ver"
+
+while getopts ":u:p:i:m:l:hq012" optname; do
+   #tracemsg "Option $optname has value $OPTARG"
+   case "$optname" in
+      "h")
+         help
+         exit 1
+      ;;
+      "q")
+         export deb2scr="no"
+         quietmode=" -q "
+         debmsg " quiet mode"
+      ;;
+      "0")
+         export deb2scr="yes"
+         export debug="info"
+         quietmode=" -0 "
+         debmsg " info mode"
+      ;;
+      "1")
+         export deb2scr="yes"
+         export debug="debug"
+         quietmode=" -1 "
+         debmsg " debug mode"
+      ;;
+      "2")
+         export deb2scr="yes"
+         export debug="trace"
+         quietmode=" -2 "
+         debmsg " trace mode"
+      ;;
+      "l")
+         export logfile="$OPTARG"
+         debmsg " log: $logfile"
+      ;;
+      "i")
+         ilo_ip="$OPTARG"
+      ;;
+      "m")
+         mac="$OPTARG"
+         mac=$(echo $mac | tr 'A-Z' 'a-z')
+         if [[ ! $mac =~ $regex_mac ]]; then
+            errmsg "[$mac] is not a valid MAC directory - ignore"
+            exit 77
+         fi 
+         mac=$(echo $mac | tr ':' '-')                               
+      ;;
+      "u")
+         ilo_u="$OPTARG"
+      ;;
+      "p")
+         pw="$OPTARG"
+      ;;
+      "?")
+         errmsg "Unknown option $OPTARG"
+      ;;
+      ":")
+         errmsg "No argument value for option $OPTARG"
+      ;;
+      *)
+         # Should not occur
+         errmsg "Unknown error while processing options"
+      ;;
+   esac
+done
+
+if [ -z $pw ] || [ -z $ilo_ip ] || [ -z $mac ]; then
+   help
+   exit 1
+fi
+
+rcini="$rcsysdir/$mac/rc.ini"
+if [ -f $rcini ]; then
+   pwv=""
+   pwc=""
+   crypw
+   ilo_upw=$pwv
+   ilo_upwc=$pwc
+   echo "rc_http='https://"$ilo_ip"'" >>$rcini
+   retc=$?
+   if [ $retc -eq 0 ]; then
+      echo "rc_ssh='ssh://"$ilo_ip"'" >>$rcini
+      retc=$?
+   fi
+   if [ $retc -eq 0 ]; then
+      echo "rc_desc='HP iLO v4 on "$ilo_ip"'" >>$rcini
+      retc=$?
+   fi
+   if [ $retc -eq 0 ]; then
+      echo "rc_icon='hpilo4.png'" >>$rcini
+      retc=$?
+   fi
+   if [ $retc -eq 0 ]; then
+      echo "ilo_u='"$ilo_u"'" >>$rcini
+      retc=$?
+   fi
+   if [ $retc -eq 0 ]; then
+      echo "ilo_upw='"$ilo_upw"'" >>$rcini
+      retc=$?
+   fi
+   if [ $retc -eq 0 ]; then
+      echo "ilo_upwc='"$ilo_upwc"'" >>$rcini
+      retc=$?
+   fi
+   if [ $retc -eq 0 ]; then
+      echo "ilo_ip='"$ilo_ip"'" >>$rcini
+      retc=$?
+   fi
+else
+   errmsg "cannot find rc.ini [$rcini] in mac dir - abort"
+   retc=99
+fi
+
+
+infmsg "End $progname rc=$retc"
+exit $retc

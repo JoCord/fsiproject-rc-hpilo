@@ -1,0 +1,7 @@
+<RIBCL VERSION="2.0">
+   <LOGIN USER_LOGIN="" PASSWORD="">
+      <SERVER_INFO MODE="write">       
+         <HOLD_PWR_BTN TOGGLE = "No" />                 
+      </SERVER_INFO>
+   </LOGIN>
+</RIBCL>

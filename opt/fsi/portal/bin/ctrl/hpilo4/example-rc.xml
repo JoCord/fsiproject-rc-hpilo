@@ -1,0 +1,21 @@
+<ctrl hpilo4>                                               # name of control dir - case sensitiv
+   descr          HP iLO v4                                 # remote board description in input mask
+   default        true                                      # is this the default choose
+   <ask User>                                               # ask for text input - variable User ( _ forbidden)
+      default     admin                                     # set a default user
+      descr       Remote User                               # if a descr given, use this for description of input field
+      param       -u                                        # -u for parameter of mkrc - required
+      length      100                                       # user name input max length - default=15
+   </ask>
+   <ask Password>
+      default     plaintextpw                               # ilo plain test admin password
+      crypt       true                                      # do not show entry - show * , default false
+      param       -p
+      length      30
+   </ask>
+   <ask remoteip>
+      descr       Remote IP or DNS name of iLO
+      param       -i
+      length      100
+   </ask>
+</ctrl>

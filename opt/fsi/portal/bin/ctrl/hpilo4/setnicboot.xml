@@ -1,0 +1,8 @@
+<RIBCL VERSION="2.0">
+ <LOGIN USER_LOGIN="" PASSWORD="">
+   <SERVER_INFO MODE="write">
+    <SET_ONE_TIME_BOOT value = "NETWORK"/>
+   </SERVER_INFO>
+ </LOGIN>
+</RIBCL>
+
